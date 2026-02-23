@@ -1,0 +1,14 @@
+*.o
+*.a
+*.lo
+*.la
+*.so
+*.obj
+*.d
+
+.cache
+.vs
+.vscode
+.flatpak-builder
+
+build/
