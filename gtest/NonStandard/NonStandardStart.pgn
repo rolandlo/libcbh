@@ -1,0 +1,21 @@
+[Event "Plauschturnier"]
+[Site "?"]
+[Date "2000.01.25"]
+[Round "3"]
+[White "Weisser, Willy"]
+[Black "Schwarzer, Schangli"]
+[Result "1-0"]
+[WhiteElo "1555"]
+[BlackElo "1632"]
+[SetUp "1"]
+[TimeMode "normal"]
+[Annotator "Muster,Hans"]
+[FEN "1r3r1k/p5p1/QpB1RnPp/2p2pq1/2PP1b2/1N1P4/PPK4P/4R3 b - - 0 9"]
+
+9...Qxg6 10.dxc5 bxc5 11.Nxc5 Qh5 12.Bb5 Qxh2+ 13.R1e2 Qg3 14.Qxa7 Ra8 15.Qe7
+Ng8 16.Qb7 Rfb8 17.Qg2 Rxa2 18.Qxg3 Bxg3 19.Re8 Rxe8 20.Rxe8 f4 21.Bc6 Kh7
+22.Be4+ g6 23.Bxg6+ Kxg6 24.Rxg8+ Kf5 25.Ne4 Bh4 26.c5 Ra6 27.b4 f3 28.b5 Ra2+
+29.Kb3 Re2 30.Rf8+ Kg4 31.b6 f2 32.b7 Re1 33.Nxf2+ Bxf2 34.Rxf2 Rb1+ 35.Rb2
+Rxb2+ 36.Kxb2
+1-0
+

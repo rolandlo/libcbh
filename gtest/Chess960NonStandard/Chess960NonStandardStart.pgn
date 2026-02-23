@@ -1,0 +1,66 @@
+[Event "from start"]
+[Site "?"]
+[Date "2026.02.07"]
+[Round "?"]
+[White "White"]
+[Black "Black"]
+[Result "*"]
+[Annotator "Muster,Hans"]
+[Variant "chess 960"]
+[SetUp "1"]
+[FEN "rnbnkqrb/pppppppp/8/8/8/8/PPPPPPPP/RNBNKQRB w GAga - 0 1"]
+[PlyCount "20"]
+[SourceVersionDate "2026.02.07"]
+
+{[#] Schach 960-Stellung 253} 1. h4 g6 2. g3 Bf6 3. a4 Qh6 4. Ra3 Bxh4 5. gxh4
+Qxh4 6. Qh3 Qxh3 7. Rxh3 Ne6 8. Bf3 d6 9. Nbc3 Ng5 10. Rhh1 Bf5 *
+
+[Event "from move 10"]
+[Site "?"]
+[Date "2026.02.07"]
+[Round "?"]
+[White "White"]
+[Black "Black"]
+[Result "*"]
+[Annotator "Muster,Hans"]
+[Variant "chess 960"]
+[SetUp "1"]
+[FEN "rnb1k1r1/ppp1pp1p/3p2p1/6n1/P7/2N2B2/1PPPPP2/2BNK1RR b Gga - 0 10"]
+[PlyCount "1"]
+[SourceVersionDate "2026.02.07"]
+
+{[#] Schach 960-Stellung 253} 10... Bf5 *
+
+[Event "from start"]
+[Site "?"]
+[Date "2026.02.07"]
+[Round "?"]
+[White "White, castling rook h1"]
+[Black "Black"]
+[Result "*"]
+[Annotator "Muster,Hans"]
+[Variant "chess 960"]
+[SetUp "1"]
+[FEN "rnbnkbqr/pppppppp/8/8/8/8/PPPPPPPP/RNBNKBQR w HAha - 0 1"]
+[PlyCount "26"]
+[SourceVersionDate "2026.02.07"]
+
+{[#] Schach 960-Stellung 253} 1. a4 g6 2. Ra3 d6 3. g4 Bh6 4. g5 Bxg5 5. Qxg5
+Qg7 6. Qh6 Qxh6 7. Rh3 Qf4 8. Bg2 Qxh2 9. R3xh2 Ne6 10. Bf3 Ng5 11. Rg2 Be6 12.
+Nbc3 Rg8 13. Rgg1 Bf5 *
+
+[Event "from move 13"]
+[Site "?"]
+[Date "2026.02.07"]
+[Round "?"]
+[White "White, castling rook h1"]
+[Black "Black"]
+[Result "*"]
+[Annotator "Muster,Hans"]
+[Variant "chess 960"]
+[SetUp "1"]
+[FEN "rn2k1r1/ppp1pp1p/3pb1p1/6n1/P7/2N2B2/1PPPPP2/2BNK1RR b Ha - 0 13"]
+[PlyCount "1"]
+[SourceVersionDate "2026.02.07"]
+
+{[#] Schach 960-Stellung 253} 13... Bf5 *

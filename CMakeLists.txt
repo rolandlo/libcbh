@@ -35,3 +35,8 @@ file(GLOB LIBCBH_SRC src/*.h src/*.cpp)
 add_executable(libcbh ${LIBCBH_SRC})
 
 install(TARGETS libcbh DESTINATION libcbh)
+
+option(GTEST "Build unit tests" OFF)
+if(GTEST)
+  add_subdirectory(gtest)
+endif()

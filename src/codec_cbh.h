@@ -78,6 +78,11 @@ public:
 	std::pair<size_t, size_t> parseProgress();
 
 	/**
+	 * The number of games in the database according to the index header
+	 */
+	size_t numGames();
+
+	/**
 	 * Returns the list of errors produced by parseNext() calls.
 	 */
 	const char* parseErrors();
