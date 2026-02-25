@@ -21,22 +21,23 @@
  */
 
 /** @file
- * Implements the CodecCBH class.
+ * Implements the CbhCodec class.
  */
 
 #pragma once
 
-#include "cbh_decode_annotator.h"
-#include "cbh_decode_game.h"
-#include "cbh_decode_player.h"
-#include "cbh_decode_source.h"
-#include "cbh_decode_tournament.h"
-#include "filebuf.h"
+#include "cbh.h"
+#include "cbh_decode_base.h"
+#include "error.h"
+#include "interface.h"
 #include <filesystem>
 #include <vector>
 
+class CbhDecoder;
+
 // This class manages databases encoded in Chessbase's cbh format.
-class CodecCBH final {
+class CbhCodecImpl final {
+public:
 	Filebuf idxfile_; // header file
 
 	std::vector<std::string> filenames_;
@@ -50,43 +51,5 @@ class CodecCBH final {
 	std::unique_ptr<CbhDecoder> source_decoder;
 	std::unique_ptr<CbhDecoder> game_decoder;
 
-public:
-	/**
-	 * Opens a CBH database.
-	 * After successfully opening the file, the object is ready for
-	 * parseNext() calls.
-	 * @param filename: full path of the cbh file to be opened.
-	 * @param fmode:    valid file access mode.
-	 * @returns OK in case of success, an @e errorT code otherwise.
-	 */
-	errorT open(const char* filename);
-
-	/**
-	 * Reads the next game.
-	 * @param game: the Game object where the data will be stored.
-	 * @returns
-	 * - ERROR_NotFound if there are no more games to be read.
-	 * - OK otherwise.
-	 */
-	errorT parseNext(Game& game);
-
-	/**
-	 * Returns info about the parsing progress.
-	 * @returns a pair<size_t, size_t> where first element is the quantity of
-	 * data parsed and second one is the total amount of data of the database.
-	 */
-	std::pair<size_t, size_t> parseProgress();
-
-	/**
-	 * The number of games in the database according to the index header
-	 */
-	size_t numGames();
-
-	/**
-	 * Returns the list of errors produced by parseNext() calls.
-	 */
-	const char* parseErrors();
-
-private:
-	errorT read_index_header(fileModeT fmode, const char* fname);
+	errorT read_index_header(const char* fname);
 };

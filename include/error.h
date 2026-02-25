@@ -13,7 +13,8 @@
 //
 ///////////////////////////////////////////////////////////////////////////
 
-#pragma once
+#ifndef SCID_ERROR_H
+#define SCID_ERROR_H
 
 typedef   unsigned short   errorT;
 
@@ -81,6 +82,8 @@ const errorT
 
 
 static_assert(OK == false);
+
+#endif // #ifdef SCID_ERROR_H
 
 ///////////////////////////////////////////////////////////////////////////
 //  EOF:    error.h

@@ -1,44 +1,31 @@
 /*
- * Copyright (C) 2026  Roland Lötscher
+ * Copyright (C) 2026 Roland Lötscher.
  *
- * This file is part of SCID (Shane's Chess Information Database).
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
  *
- * SCID is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation.
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
  *
- * SCID is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with SCID. If not, see <http://www.gnu.org/licenses/>.
- *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH
+ * THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
 #include "cbh_decode_annotation.h"
+#include "mapping.h"
+#include "nags.h"
 
 constexpr int ANNOTATION_HEADER_SIZE = 26;
 constexpr int ANNOTATION_ENTRY_SIZE = 62;
-
-static std::string squares[64] = {
-    "a1", "a2", "a3", "a4", "a5", "a6", "a7", "a8", // a-file
-	"b1", "b2", "b3", "b4", "b5", "b6", "b7", "b8", // b-file
-	"c1", "c2", "c3", "c4", "c5", "c6", "c7", "c8", // c-file
-	"d1", "d2", "d3", "d4", "d5", "d6", "d7", "d8", // d-file
-	"e1", "e2", "e3", "e4", "e5", "e6", "e7", "e8", // e-file
-	"f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", // f-file
-	"g1", "g2", "g3", "g4", "g5", "g6", "g7", "g8", // g-file
-	"h1", "h2", "h3", "h4", "h5", "h6", "h7", "h8", // h-file
-};
-
-static inline std::string squareName(byte sq) {
-	if (1 < sq && sq < 65) {
-		return squares[sq - 1];
-	}
-	return "";
-}
 
 static inline std::string colorName(byte col) {
 	switch (col) {
@@ -53,148 +40,154 @@ static inline std::string colorName(byte col) {
 	}
 }
 
-CbhAnnotationDecoder::CbhAnnotationDecoder(const char* filename,
-                                           fileModeT fmode)
-    : CbhDecoder(filename, fmode) {}
+CbhAnnotationDecoder::CbhAnnotationDecoder(const char* filename)
+    : CbhDecoder(filename) {}
 
 errorT CbhAnnotationDecoder::decode_header() {
-	if (auto err = stream_.open(filename_, fmode_))
+	if (auto err = stream_.open(filename_, FMODE_ReadOnly))
 		return err;
 
 	return OK;
 }
 
-void CbhAnnotationDecoder::decodeSquares(Game& game, const char* content,
-                                         int length) {
+void CbhAnnotationDecoder::decodeSquares(std::vector<Comment>& comments,
+                                         const char* content, int length) {
 	for (int i = 0; 2 * i < length; i++) {
 		std::string col = colorName(content[2 * i]);
-		std::string sq = squareName(content[2 * i + 1]);
-		std::string annotation = "[%draw full," + sq + "," + col + "]";
-		auto& str = game.accessMoveComment();
-		str = str + annotation;
+		squareT square = mapSquare(content[2 * i + 1] - 1);
+		comments.push_back(SquareComment(square, col));
 	}
 }
 
-void CbhAnnotationDecoder::decodeArrows(Game& game, const char* content,
-                                        int length) {
+void CbhAnnotationDecoder::decodeArrows(std::vector<Comment>& comments,
+                                        const char* content, int length) {
 	for (int i = 0; 3 * i < length; i++) {
 		std::string col = colorName(content[3 * i]);
-		std::string sqFrom = squareName(content[3 * i + 1]);
-		std::string sqTo = squareName(content[3 * i + 2]);
-		std::string annotation = "[%draw arrow," + sqFrom + "," + sqTo + "," +
-		                         col + "]";
-		auto& str = game.accessMoveComment();
-		str = str + annotation;
+		squareT sqFrom = mapSquare(content[3 * i + 1] - 1);
+		squareT sqTo = mapSquare(content[3 * i + 2] - 1);
+		comments.push_back(ArrowComment(sqFrom, sqTo, col));
 	}
 }
 
-void CbhAnnotationDecoder::decodeSymbol(Game& game, const byte* content,
-                                        int length) {
+void CbhAnnotationDecoder::decodeSymbol(std::vector<Comment>& comments,
+                                        const byte* content, int length,
+                                        colorT sideToMove) {
 	if (length == 0)
 		return;
+	SymbolComment comment;
 
-	colorT whiteToMove = game.currentPos()->WhiteToMove();
-#define NAG(code) whiteToMove ? NAG_##code : NAG_Black##code
+#define NAG(code) (sideToMove == WHITE) ? NAG_White##code : NAG_Black##code
 
 	switch (content[0]) {
 	case 0x01:
-		game.AddNag(NAG_GoodMove);
+		comment.symbol = NAG_GoodMove;
 		break;
 	case 0x02:
-		game.AddNag(NAG_PoorMove);
+		comment.symbol = NAG_PoorMove;
 		break;
 	case 0x03:
-		game.AddNag(NAG_ExcellentMove);
+		comment.symbol = NAG_ExcellentMove;
 		break;
 	case 0x04:
-		game.AddNag(NAG_Blunder);
+		comment.symbol = NAG_Blunder;
 		break;
 	case 0x05:
-		game.AddNag(NAG_InterestingMove);
+		comment.symbol = NAG_InterestingMove;
 		break;
 	case 0x06:
-		game.AddNag(NAG_DubiousMove);
+		comment.symbol = NAG_DubiousMove;
 		break;
 	case 0x08:
-		game.AddNag(NAG_OnlyMove);
+		comment.symbol = NAG_OnlyMove;
 		break;
 	case 0x16:
-		game.AddNag(NAG(ZugZwang));
+		comment.symbol = NAG(ZugZwang);
 		break;
 	}
 
-	if (length == 1)
+	if (length == 1) {
+		comments.push_back(comment);
 		return;
+	}
 
 	switch (content[1]) {
 	case 0x0b:
-		game.AddNag(NAG_Equal);
+		comment.evaluation = NAG_Equal;
 		break;
 	case 0x0d:
-		game.AddNag(NAG_Unclear);
+		comment.evaluation = NAG_Unclear;
 		break;
 	case 0x0e:
-		game.AddNag(NAG_WhiteSlight);
+		comment.evaluation = NAG_WhiteSlight;
 		break;
 	case 0x0f:
-		game.AddNag(NAG_BlackSlight);
+		comment.evaluation = NAG_BlackSlight;
 		break;
 	case 0x10:
-		game.AddNag(NAG_WhiteClear);
+		comment.evaluation = NAG_WhiteClear;
 		break;
 	case 0x11:
-		game.AddNag(NAG_BlackClear);
+		comment.evaluation = NAG_BlackClear;
 		break;
 	case 0x12:
-		game.AddNag(NAG_WhiteDecisive);
+		comment.evaluation = NAG_WhiteDecisive;
 		break;
 	case 0x13:
-		game.AddNag(NAG_BlackDecisive);
+		comment.evaluation = NAG_BlackDecisive;
 		break;
-		//		case 0x20: game.AddNag(NAG(HasAModerateTimeAdvantage)); break;
+	case 0x20:
+		comment.evaluation = NAG(ModerateDevelopmentAdvantage);
+		break;
 	case 0x24:
-		game.AddNag(NAG_WithInitiative);
+		comment.evaluation = NAG(WithInitiative);
 		break;
 	case 0x28:
-		game.AddNag(NAG_WithAttack);
+		comment.evaluation = NAG(WithAttack);
 		break;
 	case 0x2c:
-		game.AddNag(NAG_Compensation);
+		comment.evaluation = NAG(Compensation);
 		break;
 	case 0x84:
-		game.AddNag(NAG(SlightCounterPlay));
+		comment.evaluation = NAG(CounterPlay);
 		break;
 	case 0x8a:
-		game.AddNag(NAG_TimeLimit);
+		comment.evaluation = NAG(TimeControlPressure);
 		break;
 	case 0x92:
-		game.AddNag(NAG_Novelty);
+		comment.evaluation = NAG_Novelty;
 		break;
 	}
 
-	if (length == 2)
+	if (length == 2) {
+		comments.push_back(comment);
 		return;
+	}
 
 	switch (content[2]) {
 	case 0x8C:
-		game.AddNag(NAG_WithIdea);
+		comment.prefix = NAG_WithIdea;
 		break;
-		//		case 0x8D: game.AddNag(NAG_AimedAgainst); break;
+	case 0x8D:
+		comment.prefix = NAG_AimedAgainst;
+		break;
 	case 0x8E:
-		game.AddNag(NAG_BetterIs);
+		comment.prefix = NAG_BetterIs;
 		break;
 	case 0x8F:
-		game.AddNag(NAG_WorseIs);
+		comment.prefix = NAG_WorseIs;
 		break;
-		//		case 0x90: game.AddNag(NAG_EquivalentMove); break;
+	case 0x90:
+		comment.prefix = NAG_EquivalentIs;
+		break;
 	case 0x91:
-		game.AddNag(NAG_Comment);
+		comment.prefix = NAG_EditorialComment;
 		break;
 	}
 #undef NAG
+	comments.push_back(comment);
 }
 
-errorT CbhAnnotationDecoder::decode_record(Game& game,
+errorT CbhAnnotationDecoder::decode_record(GameReturnValue& game,
                                            std::vector<uint32_t> offsets) {
 	uint32_t annotation_offset = offsets.at(0);
 	stream_.pubseekpos(annotation_offset + 10); // move to offset 10
@@ -222,7 +215,9 @@ errorT CbhAnnotationDecoder::decode_record(Game& game,
 	return OK;
 }
 
-void CbhAnnotationDecoder::addAnnotations(Game& game, uint32_t move_number) {
+void CbhAnnotationDecoder::addAnnotations(std::vector<Comment>& comments,
+                                          uint32_t move_number,
+                                          colorT sideToMove) {
 	if (finished_ || move_number != move_number_) {
 		return;
 	}
@@ -247,22 +242,24 @@ void CbhAnnotationDecoder::addAnnotations(Game& game, uint32_t move_number) {
 		switch (type) {
 		case 0x02: // text after move
 		{
+			langT lang = static_cast<byte>(content[0]) << 8 |
+			             static_cast<byte>(
+			                 content[1]); // big Endian (mistake on talkchess?)
 			const char* text = content + 2;
-			// Prepend comment
-			auto& str = game.accessMoveComment();
-			str = text + str;
+			comments.push_back(TextAfterComment(lang, text));
 			break;
 		}
 		case 0x03: // symbol
 		{
-			decodeSymbol(game, reinterpret_cast<byte*>(content), size);
+			decodeSymbol(comments, reinterpret_cast<byte*>(content), size,
+			             sideToMove);
 			break;
 		}
 		case 0x04: // squares
-			decodeSquares(game, content, size);
+			decodeSquares(comments, content, size);
 			break;
 		case 0x05: // arrows
-			decodeArrows(game, content, size);
+			decodeArrows(comments, content, size);
 			break;
 		case 0x09: // training annotation
 			break;
@@ -290,12 +287,11 @@ void CbhAnnotationDecoder::addAnnotations(Game& game, uint32_t move_number) {
 			break;
 		case 0x82: // text before move
 		{
+			langT lang = static_cast<byte>(content[0]) << 8 |
+			             static_cast<byte>(
+			                 content[1]); // big Endian (mistake on talkchess?)
 			const char* text = content + 2;
-			// Append comment to previous move
-			game.MoveBackup();
-			auto& str = game.accessMoveComment();
-			str = str + text;
-			game.MoveForward();
+			comments.push_back(TextBeforeComment(lang, text));
 			break;
 		}
 		default: // unknown annotation type

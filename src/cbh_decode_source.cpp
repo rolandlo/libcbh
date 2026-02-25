@@ -1,20 +1,23 @@
 /*
- * Copyright (C) 2026  Roland Lötscher
+ * Copyright (C) 2026 Roland Lötscher.
  *
- * This file is part of SCID (Shane's Chess Information Database).
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
  *
- * SCID is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation.
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
  *
- * SCID is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with SCID. If not, see <http://www.gnu.org/licenses/>.
- *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH
+ * THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
 #include "cbh_decode_source.h"
@@ -23,11 +26,11 @@
 constexpr int SOURCE_HEADER_FIXED_SIZE = 28; // without extra
 constexpr int SOURCE_ENTRY_SIZE = 68;
 
-CbhSourceDecoder::CbhSourceDecoder(const char* filename, fileModeT fmode)
-    : CbhDecoder(filename, fmode) {}
+CbhSourceDecoder::CbhSourceDecoder(const char* filename)
+    : CbhDecoder(filename) {}
 
 errorT CbhSourceDecoder::decode_header() {
-	if (auto err = stream_.open(filename_, fmode_))
+	if (auto err = stream_.open(filename_, FMODE_ReadOnly))
 		return err;
 
 	stream_.pubseekpos(SOURCE_HEADER_FIXED_SIZE - 4);
@@ -40,7 +43,7 @@ errorT CbhSourceDecoder::decode_header() {
 	return OK;
 }
 
-errorT CbhSourceDecoder::decode_record(Game& game,
+errorT CbhSourceDecoder::decode_record(GameReturnValue& game,
                                        std::vector<uint32_t> offsets) {
 	uint32_t source = offsets.at(0);
 	stream_.pubseekpos(source_header_size_ + source * SOURCE_ENTRY_SIZE +
@@ -73,17 +76,17 @@ errorT CbhSourceDecoder::decode_record(Game& game,
 	std::string sourceQuality = std::to_string(stream_.sbumpc());
 
 	if (*title)
-		game.addTag("SourceTitle", title);
+		game.tags.emplace_back("SourceTitle", title);
 	if (*publisher)
-		game.addTag("Source", publisher);
+		game.tags.emplace_back("Source", publisher);
 	if (sourceDate != "0.0.0")
-		game.addTag("SourceDate", sourceDate);
+		game.tags.emplace_back("SourceDate", sourceDate);
 	if (sourceVersionDate != "0.0.0")
-		game.addTag("SourceVersionDate", sourceVersionDate);
+		game.tags.emplace_back("SourceVersionDate", sourceVersionDate);
 	if (sourceVersion != "0")
-		game.addTag("SourceVersion", sourceVersion);
+		game.tags.emplace_back("SourceVersion", sourceVersion);
 	if (sourceQuality != "0")
-		game.addTag("SourceQuality", sourceQuality);
+		game.tags.emplace_back("SourceQuality", sourceQuality);
 
 	return OK;
 }

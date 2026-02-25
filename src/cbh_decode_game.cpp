@@ -1,23 +1,27 @@
 /*
- * Copyright (C) 2026  Roland Lötscher
+ * Copyright (C) 2026 Roland Lötscher.
  *
- * This file is part of SCID (Shane's Chess Information Database).
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
  *
- * SCID is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation.
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
  *
- * SCID is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with SCID. If not, see <http://www.gnu.org/licenses/>.
- *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH
+ * THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
 #include "cbh_decode_game.h"
+#include "mapping.h"
 
 constexpr auto GAME_HEADER_SIZE = 26;
 
@@ -94,9 +98,9 @@ constexpr byte MoveNumberLookup960[256] = {
 };
 
 CbhGameDecoder::CbhGameDecoder(const char* gameFilename,
-                               const char* annotationFilename, fileModeT fmode)
-    : CbhDecoder(gameFilename, fmode),
-      annotationDecoder(CbhAnnotationDecoder(annotationFilename, fmode)) {}
+                               const char* annotationFilename)
+    : CbhDecoder(gameFilename),
+      annotationDecoder(CbhAnnotationDecoder(annotationFilename)) {}
 
 errorT CbhGameDecoder::open() {
 	if (auto err = CbhDecoder::open(); err != OK)
@@ -112,28 +116,28 @@ errorT CbhGameDecoder::flush() {
 }
 
 errorT CbhGameDecoder::decode_header() {
-	if (auto err = stream_.open(filename_, fmode_))
+	if (auto err = stream_.open(filename_, FMODE_ReadOnly))
 		return err;
 
 	return annotationDecoder.decode_header();
 }
 
-errorT CbhGameDecoder::decode_record(Game& game,
+errorT CbhGameDecoder::decode_record(GameReturnValue& game,
                                      std::vector<uint32_t> offsets) {
 	stream_.pubseekpos(offsets[0]);
-	if (auto err = startDecoding(game); err != OK)
+	if (auto err = startDecoding(game.startFen); err != OK)
 		return err;
 
 	if (auto err = annotationDecoder.decode_record(game, {offsets[1]}))
 		return err;
 
-	auto res = decodeMoves(game);
+	auto res = decodeMoves(game.annotatedMoves);
 	if (res == -1)
 		printf("Game at offset %d contains illegal moves\n", offsets[0]);
 	return OK;
 }
 
-errorT CbhGameDecoder::startDecoding(Game& game) {
+errorT CbhGameDecoder::startDecoding(std::string& startFen) {
 	char c[4];
 	stream_.sgetn(c, 4);
 	this->bytes_read_ = 4;
@@ -161,15 +165,18 @@ errorT CbhGameDecoder::startDecoding(Game& game) {
 		stream_.sgetn(pos, size);
 		this->bytes_read_ += size;
 		position_.setup(reinterpret_cast<byte*>(pos), this->is_chess960);
-		Position position = position_.pos();
-		game.SetStartPos(position);
+		char start[1024];
+		position_.pos().PrintFEN(start);
+		startFen = start;
 	} else {
 		position_.setup();
+		startFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 	}
 	return OK;
 }
 
-uint32_t CbhGameDecoder::decodeMoves(Game& game, uint32_t move_number) {
+uint32_t CbhGameDecoder::decodeMoves(std::vector<AnnotatedMove>& moves,
+                                     uint32_t move_number) {
 	simpleMoveT sm;
 
 	// We can't blindly assume that the game ends in a pop
@@ -180,6 +187,7 @@ uint32_t CbhGameDecoder::decodeMoves(Game& game, uint32_t move_number) {
 		bytes_read_ += 1;
 		byte b = static_cast<byte>(c[0]);
 		byte move_code = this->translate_byte(b, move_number);
+		colorT sideToMove = position_.pos().GetToMove();
 
 		switch (decodeMove(sm, move_code, move_number)) {
 		case Token_Move:
@@ -187,30 +195,27 @@ uint32_t CbhGameDecoder::decodeMoves(Game& game, uint32_t move_number) {
 				printf("Aborting on move number %d\n", move_number);
 				return -1;
 			}
-			game.AddMove(sm);
-			annotationDecoder.addAnnotations(game, move_number);
+			if (sm.castling == 1) { // decode castling via sm.promote = KING
+				sm.promote = KING;
+			}
+			moves.emplace_back(sm.from, sm.to, sm.promote,
+			                   std::vector<Comment>());
+			annotationDecoder.addAnnotations(moves.back().comments, move_number,
+			                                 sideToMove);
 			move_number++;
 			break;
 		case Token_Push: {
-			// printf("Variation start\n");
-			auto location = game.currentLocation();
-			move_number = decodeMoves(game, move_number);
+			moves.emplace_back(MovePush);
+			move_number = decodeMoves(moves, move_number);
 			if (move_number == -1)
 				return -1;
-			game.restoreLocation(location);
-			game.MoveForward();
-			game.AddVariation();
 			break;
 		}
 		case Token_Pop:
-			/*
-			 * printf("\nFEN at variation end: \n");
-			 *  char str[1024];
-			 *  game.GetCurrentPos()->PrintFEN(str);
-			 * printf("%s\n", str);
-			 */
+			moves.emplace_back(MovePop);
 			return move_number;
 		case Token_Skip:
+			moves.emplace_back(MoveSkip);
 			break;
 		}
 	}
@@ -987,8 +992,8 @@ uint32_t CbhGameDecoder::decodeMove(simpleMoveT& sm, byte move_code,
 		byte b2 = static_cast<byte>(c[1]);
 		uint32_t word = this->translate_byte(b1, move_number) << 8;
 		word |= this->translate_byte(b2, move_number);
-		byte from = decoder::PositionStack::mapSquare(word & 63);
-		byte to = decoder::PositionStack::mapSquare((word >> 6) & 63);
+		byte from = mapSquare(word & 63);
+		byte to = mapSquare((word >> 6) & 63);
 
 		if (from == to) { // chess960 castling
 			sm = position_.doCastling(square_Fyle(to));

@@ -1,20 +1,23 @@
 /*
- * Copyright (C) 2026  Roland Lötscher
+ * Copyright (C) 2026 Roland Lötscher.
  *
- * This file is part of SCID (Shane's Chess Information Database).
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
  *
- * SCID is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation.
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
  *
- * SCID is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with SCID. If not, see <http://www.gnu.org/licenses/>.
- *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH
+ * THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
 #include "cbh_decode_player.h"
@@ -22,11 +25,11 @@
 constexpr int PLAYER_HEADER_FIXED_SIZE = 28; // without extra
 constexpr int PLAYER_ENTRY_SIZE = 67;
 
-CbhPlayerDecoder::CbhPlayerDecoder(const char* filename, fileModeT fmode)
-    : CbhDecoder(filename, fmode) {}
+CbhPlayerDecoder::CbhPlayerDecoder(const char* filename)
+    : CbhDecoder(filename) {}
 
 errorT CbhPlayerDecoder::decode_header() {
-	if (auto err = stream_.open(filename_, fmode_))
+	if (auto err = stream_.open(filename_, FMODE_ReadOnly))
 		return err;
 
 	stream_.pubseekpos(PLAYER_HEADER_FIXED_SIZE - 4);
@@ -39,12 +42,13 @@ errorT CbhPlayerDecoder::decode_header() {
 	return OK;
 }
 
-errorT CbhPlayerDecoder::decode_record(Game& game,
+errorT CbhPlayerDecoder::decode_record(GameReturnValue& game,
                                        std::vector<uint32_t> offsets) {
 	uint32_t white_player = offsets.at(0);
 	uint32_t black_player = offsets.at(1);
 
-	auto player_string = [&](uint32_t player_offset) {
+	auto set_player_string = [&](uint32_t player_offset, std::string& last,
+	                             std::string& first) {
 		stream_.pubseekpos(player_header_size_ +
 		                   player_offset * PLAYER_ENTRY_SIZE +
 		                   9); // move to offset 9
@@ -52,12 +56,12 @@ errorT CbhPlayerDecoder::decode_record(Game& game,
 		char first_name[21] = {0};
 		stream_.sgetn(last_name, 30);
 		stream_.sgetn(first_name, 20);
-		// printf("%s, %s\n", last_name, first_name);
-		return std::string(last_name) + ", " + std::string(first_name);
+		last = last_name;
+		first = first_name;
 	};
 
-	game.SetWhiteStr(player_string(white_player).c_str());
-	game.SetBlackStr(player_string(black_player).c_str());
+	set_player_string(white_player, game.whiteName, game.whiteFirstName);
+	set_player_string(black_player, game.blackName, game.blackFirstName);
 
 	return OK;
 }
