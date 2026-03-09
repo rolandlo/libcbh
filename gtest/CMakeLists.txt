@@ -25,7 +25,9 @@ endif()
 add_subdirectory(${CMAKE_BINARY_DIR}/googletest ${CMAKE_BINARY_DIR}/googletest/Build EXCLUDE_FROM_ALL)
 
 # codec_tests
-file(GLOB GTEST_SRC *.cpp)
+set(GTEST_SRC
+  test_cbh_codec.cpp
+)
 add_executable(codec_tests ${GTEST_SRC})
 target_compile_definitions(codec_tests PRIVATE -DTESTDIR=\"${CMAKE_CURRENT_LIST_DIR}/\")
 target_link_libraries(codec_tests PRIVATE cbh gtest_main)

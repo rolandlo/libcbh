@@ -25,7 +25,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CXX_FLAGS)
 endif()
 
 # cbh
-file(GLOB cbh_SRC
+set(cbh_SRC
   src/cbh_decode_annotation.cpp
   src/cbh_decode_annotator.cpp
   src/cbh_decode_game.cpp
@@ -37,7 +37,7 @@ file(GLOB cbh_SRC
   src/position.cpp)
 add_library(cbh SHARED ${cbh_SRC})
 
-file(GLOB cbh_HDR
+set(cbh_HDR
   include/cbh.h
   include/error.h
   include/interface.h
