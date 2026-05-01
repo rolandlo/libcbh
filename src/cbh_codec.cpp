@@ -190,7 +190,8 @@ errorT CbhCodecImpl::read_index_header(const char* fname) {
 
 	uint head1 = idxfile_.ReadThreeBytes();
 	uint head2 = idxfile_.ReadThreeBytes();
-	if ((head1 != 0x00002C && head1 != 0x000024) || head2 != 0x002E01)
+	if ((head1 != 0x00002C && head1 != 0x000024) ||
+	    (head2 != 0x002E01 && head2 != 0x002E05))
 		return ERROR_BadMagic;
 
 	const std::streamsize remaining = INDEX_HEADER_SIZE - 6;
