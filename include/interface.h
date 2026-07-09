@@ -108,7 +108,6 @@ struct Date {
 struct GameReturnValue {
 	std::vector<AnnotatedMove> annotatedMoves;
 	std::vector<Tag> tags;
-	std::string event;
 	Date gameDate;
 	eloT whiteElo;
 	eloT blackElo;

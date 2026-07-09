@@ -61,7 +61,7 @@ errorT CbhTournamentDecoder::decode_record(GameReturnValue& game,
 	uint month = (date >> 5) & 15;
 	uint day = date & 31;
 
-	game.event = title;
+	game.eventTitle = title;
 	game.eventPlace = place;
 	game.eventDate = Date(year, month, day);
 
